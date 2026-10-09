@@ -503,12 +503,6 @@ void WLED::setup()
 
   if (needsCfgSave) serializeConfigToFS(); // usermods required new parameters; need to wait for strip to be initialised #4752
 
-  if (bootPreset > 0) {
-    handlePresets();  // handle boot preset
-    handlePlaylist(); // handle playlist if preset queued one
-    handlePresets();  // handle presets again to give a chance for anything queued by the boot preset or playlist
-  }
-  
   if (strcmp(multiWiFi[0].clientSSID, DEFAULT_CLIENT_SSID) == 0 && !configBackupExists())
     showWelcomePage = true;
 
@@ -539,7 +533,7 @@ void WLED::setup()
   #endif
 
   // fill in unique mdns default
-  if (strcmp(cmDNS, DEFAULT_MDNS_NAME) == 0) sprintf_P(cmDNS, PSTR("wled-%*s"), 6, escapedMac.c_str() + 6);
+  if (strcmp(cmDNS, DEFAULT_MDNS_NAME) == 0) snprintf_P(cmDNS, sizeof(cmDNS)-1, PSTR("%s-%*s"), WLED_MDNS_PREFIX, 6, escapedMac.c_str() + 6);
 #ifndef WLED_DISABLE_MQTT
   if (mqttDeviceTopic[0] == 0) sprintf_P(mqttDeviceTopic, PSTR("wled/%*s"), 6, escapedMac.c_str() + 6);
   if (mqttClientID[0] == 0)    sprintf_P(mqttClientID, PSTR("WLED-%*s"), 6, escapedMac.c_str() + 6);
@@ -632,7 +626,13 @@ void WLED::beginStrip()
   else briLast = briS; // go to startup brightness (set in UI) when turning on (can be overruled by a preset)
   colorUpdated(CALL_MODE_INIT); // set bootup brightness immediately, do not send notification (brightness is also set for preset if used, useful for swipe etc.)
 
-  if (bootPreset > 0) {
+  if (!WLED_WIFI_CONFIGURED && bootPreset != FACTORY_SIGNPOST_PRESET) {
+    // WiFi not configured yet: show the setup signpost tour (logo / AP address / QR code)
+    // instead of the regular boot preset; self-corrects to bootPreset once provisioned.
+    // (cannot use showWelcomePage: it is computed after beginStrip() in setup())
+    applyPreset(FACTORY_SIGNPOST_PRESET, CALL_MODE_INIT);
+  }
+  else if (bootPreset > 0) {
     applyPreset(bootPreset, CALL_MODE_INIT);
   }
   else {
@@ -663,6 +663,7 @@ void WLED::initAP(bool resetAP)
   #ifdef ARDUINO_ARCH_ESP32
   DEBUG_PRINT(F("access point maxTxPower set to ")); DEBUG_PRINTLN(txPower);
   WiFi.setTxPower(wifi_power_t(txPower));
+  WiFi.setSleep(!noWifiSleep); // otherwise a factory-fresh unit keeps default modem power-save in AP mode (setSleep is only ever called on the configured-STA path) - softAP lag/loss
   #endif
 
   if (!apActive) // start captive portal if AP active
@@ -722,7 +723,7 @@ void WLED::initConnection()
   WiFi.setHostname(hostname);
 #endif
 
-  if (uint32_t(multiWiFi[selectedWiFi].staticIP) != 0U && uint32_t(multiWiFi[selectedWiFi].staticGW) != 0U) {  // explicit cast to uint32_t ensures we check the IPv4 adress, not IPv6
+  if (multiWiFi[selectedWiFi].staticIP != 0U && multiWiFi[selectedWiFi].staticGW != 0U) {
     WiFi.config(multiWiFi[selectedWiFi].staticIP, multiWiFi[selectedWiFi].staticGW, multiWiFi[selectedWiFi].staticSN, dnsAddress);
   } else {
     WiFi.config(IPAddress((uint32_t)0), IPAddress((uint32_t)0), IPAddress((uint32_t)0));

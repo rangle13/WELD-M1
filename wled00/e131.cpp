@@ -106,17 +106,12 @@ void handleE131Packet(e131_packet_t* p, IPAddress clientIP, byte protocol, size_
       handleArtnetPollReply(clientIP);
       return;
     }
-    if (packetLen < 18) return; // need art_length (offset 16, 2 bytes) for DMX data
     uni = p->art_universe;
     dmxChannels = htons(p->art_length);
-    const int artNetMaxData = (packetLen >= 18) ? (int)(packetLen - 18) : 0; // art_data at offset 18; clamp so e131_data[dmxChannels] stays in bounds
-    if (dmxChannels > artNetMaxData) dmxChannels = artNetMaxData;
-    if (dmxChannels > MAX_CHANNELS_PER_UNIVERSE) dmxChannels = MAX_CHANNELS_PER_UNIVERSE;
     e131_data = p->art_data;
     seq = p->art_sequence_number;
     mde = REALTIME_MODE_ARTNET;
   } else if (protocol == P_E131) {
-    if (packetLen < 126) return; // need up to property_values[0] (offset 125) and property_value_count (offset 123)
     // Ignore PREVIEW data (E1.31: 6.2.6)
     if ((p->options & 0x80) != 0) return;
     dmxChannels = htons(p->property_value_count) - 1; // on malformed packets, this can become negative, checked below
@@ -125,9 +120,6 @@ void handleE131Packet(e131_packet_t* p, IPAddress clientIP, byte protocol, size_
     uni = htons(p->universe);
     e131_data = p->property_values;
     seq = p->sequence_number;
-    const int e131MaxData = (packetLen > 126) ? (int)(packetLen - 126) : 0; // property_values at offset 125; clamp so e131_data[dmxChannels] stays in bounds
-    if (dmxChannels > e131MaxData) dmxChannels = e131MaxData;
-    if (dmxChannels > MAX_CHANNELS_PER_UNIVERSE) dmxChannels = MAX_CHANNELS_PER_UNIVERSE;
     if (e131Priority != 0) {
       if (p->priority < e131Priority ) return;
       // track highest priority & skip all lower priorities
@@ -143,10 +135,8 @@ void handleE131Packet(e131_packet_t* p, IPAddress clientIP, byte protocol, size_
   #ifdef WLED_ENABLE_DMX
   // does not act on out-of-order packets yet
   if (e131ProxyUniverse > 0 && uni == e131ProxyUniverse) {
-    // Art-Net: art_data is 0-indexed (channel 1 at index 0)
-    // E1.31: property_values[0] is start code, (channel 1 at index 1)
     for (uint16_t i = 1; i <= dmxChannels; i++)
-      dmx.write(i, mde == REALTIME_MODE_ARTNET ? e131_data[i-1] : e131_data[i]);
+      dmx.write(i, e131_data[i]);
     dmx.update();
   }
   #endif

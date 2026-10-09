@@ -48,6 +48,9 @@ constexpr size_t  WLED_MAX_USERMOD_PALETTES     = WLED_USERMOD_PALETTE_ID_BASE -
 #define DEFAULT_AP_PASS     "wled1234"
 #define DEFAULT_OTA_PASS    "wledota"
 #define DEFAULT_MDNS_NAME   "x"
+#ifndef WLED_MDNS_PREFIX
+  #define WLED_MDNS_PREFIX  "wled" // prefix for the generated unique hostname: <prefix>-<last 6 MAC hex chars>
+#endif
 
 //increase if you need more
 #ifndef WLED_MAX_WIFI_COUNT
@@ -453,6 +456,10 @@ static_assert(WLED_MAX_BUSSES <= 32, "WLED_MAX_BUSSES exceeds hard limit");
 #define SEG_CAPABILITY_RGB     0x01
 #define SEG_CAPABILITY_W       0x02
 #define SEG_CAPABILITY_CCT     0x04
+
+#ifndef FACTORY_SIGNPOST_PRESET
+#define FACTORY_SIGNPOST_PRESET 9 // preset applied at boot while WiFi is unconfigured (setup signpost); no-op if the preset does not exist
+#endif
 
 // WLED Error modes
 #define ERR_NONE         0  // All good :)

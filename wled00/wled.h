@@ -7,7 +7,7 @@
  */
 
 // version code in format yymmddb (b = daily build)
-#define VERSION 2607011
+#define VERSION 2605010
 
 //uncomment this if you have a "my_config.h" file you'd like to use
 //#define WLED_USE_MY_CONFIG
@@ -274,7 +274,7 @@ using PSRAMDynamicJsonDocument = BasicJsonDocument<PSRAM_Allocator>;
 #define STRINGIFY(X) #X
 #define TOSTRING(X) STRINGIFY(X)
 
-#define WLED_CODENAME "Kagayaki"
+#define WLED_CODENAME "Niji"
 
 // AP and OTA default passwords (for maximum security change them!)
 WLED_GLOBAL char apPass[65]  _INIT(WLED_AP_PASS);
@@ -1035,7 +1035,7 @@ WLED_GLOBAL volatile uint8_t jsonBufferLock _INIT(0);
       apSSID, \
       sizeof(apSSID)-1, \
       PSTR("%s-%s"), \
-      WLED_BRAND, \
+      WLED_AP_SSID, \
       escapedMac.c_str()+6 \
     ); \
   } while(0)

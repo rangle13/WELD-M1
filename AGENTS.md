@@ -17,8 +17,8 @@ Always reference these instructions - including coding guidelines in `docs/` - f
 | `npm run build` | Build web UI into `wled00/html_*.h` / `wled00/js_*.h` | 30s |
 | `npm test` | Run test suite (Node.js built-in `node --test`) | 2 min |
 | `npm run dev` | Watch mode — auto-rebuilds web UI on changes | continuous |
-| `pio run -e esp32dev` | Build firmware (ESP32, most common target) | 5 min |
-| `pio run -e nodemcuv2` | Build firmware (ESP8266) | 5 min |
+| `pio run -e esp32dev` | Build firmware (ESP32, most common target) | 30 min |
+| `pio run -e nodemcuv2` | Build firmware (ESP8266) | 30 min |
 
 **Always run `npm ci && npm run build` before `pio run`.** The web UI build generates
 required C headers for firmware compilation.
@@ -133,8 +133,8 @@ main                # Main development trunk (daily/nightly) 17.0.0-dev. Target 
 
 Background Info:
 
-- PSRAM access is up to 15× slower than DRAM on ESP32 (dual-SPI bus), 3–10× slower than DRAM on ESP32-S3/-S2 with quad-SPI bus. On ESP32-S3 with octal PSRAM (`CONFIG_SPIRAM_MODE_OCT`), the penalty is smaller (~2×) because the 8-line DTR bus can transfer 8 bits in parallel. On ESP32-P4 with hex PSRAM (`CONFIG_SPIRAM_MODE_HEX`), the 16-line bus runs at 200 MHz which brings it on-par with DRAM.
-- Consider that ESP32 often crashes when the largest available DRAM chunk gets below 10 KB.
+- PSRAM access is up to 18× slower than DRAM on ESP32 (dual-SPI bus), 3–10× slower than DRAM on ESP32-S3/-S2 with quad-SPI bus. On ESP32-S3 with octal PSRAM (`CONFIG_SPIRAM_MODE_OCT`), the penalty is smaller (~2×) because the 8-line DTR bus can transfer 8 bits in parallel. On ESP32-P4 with hex PSRAM (`CONFIG_SPIRAM_MODE_HEX`), the 16-line bus runs at 200 MHz which brings it on-par with DRAM.
+- Consider that ESP32 often crashes when the largest DRAM chunk gets below 10 KB.
 
 ### Preprocessor / Feature Flags
 - Feature toggling: `WLED_DISABLE_*` and `WLED_ENABLE_*` flags (exact names matter!)
@@ -161,7 +161,6 @@ Background Info:
 
 - Use FreeRTOS mutexes, semaphores or queues when true concurrent access from multiple FreeRTOS tasks is possible, and race-conditions can lead to unexpected behaviour.
 - **Avoid `portENTER_CRITICAL()` / `portEXIT_CRITICAL()`**, as these functions stall the complete system and may cause LEDs flickering. Prefer FreeRTOS mutexes, semaphores or queues.
-- Don't use `portMAX_DELAY` when waiting to acquire a mutex - this can lock the task indefinitely. Find a reasonable max waiting time, and handle mutex timeouts gracefully.
 - **Important**: Not every shared resource needs a mutex. Some synchronization is guaranteed by the overall control flow, for example when function calls are sequenced within the same loop iteration.
 - Consider using `std::atomic` or RAII scoped guards as alternatives to mutexes, semaphores or queues.
 

@@ -211,6 +211,19 @@ bool deserializeConfig(JsonObject doc, bool fromFS) {
     // cannot call strip.deserializeLedmap()/strip.setUpMatrix() here due to already locked JSON buffer
     //if (!fromFS) doInit2D = true; // if called at boot (fromFS==true), WLED::beginStrip() will take care of setting up matrix
   }
+  #if defined(DEFAULT_PANEL_WIDTH) && defined(DEFAULT_PANEL_HEIGHT)
+  else if (fromFS && hw_led["ins"].isNull()) {
+    // fresh install (no LED config at all): seed a single default panel so
+    // fixed-geometry outputs (e.g. HUB75) boot as a correctly sized 2D matrix
+    // without user configuration; never applied once any LED config exists
+    strip.isMatrix = true;
+    strip.panel.clear();
+    WS2812FX::Panel p;
+    p.width  = DEFAULT_PANEL_WIDTH;
+    p.height = DEFAULT_PANEL_HEIGHT;
+    strip.panel.push_back(p);
+  }
+  #endif
   #endif
 
   DEBUG_PRINTF_P(PSTR("Heap before buses: %d\n"), getFreeHeapSize());
@@ -234,12 +247,36 @@ bool deserializeConfig(JsonObject doc, bool fromFS) {
       uint16_t start = elm["start"] | 0;
       if (length==0 || start + length > MAX_LEDS) continue; // zero length or we reached max. number of LEDs, just stop
       uint8_t ledType = elm["type"] | TYPE_WS2812_RGB;
+      #ifdef WLED_MM_HUB75_MIGRATION
+      // Migrate HUB75 bus entries written by WLED-MM 0.14.x, where types 100-110
+      // encode the panel size and pin[0] holds the chain length, to the 16.x
+      // layout (TYPE_HUB75MATRIX_HS with slots panelW,panelH,chain,rows,cols).
+      // Needed so devices OTA-updated from WLED-MM keep a working display.
+      if (ledType >= 100 && ledType <= 110) {
+        unsigned chain = constrain((int)pins[0], 1, 4);
+        unsigned w = 64, h = 64;               // fallback: closest safe match
+        switch (ledType) {
+          case 101: w =  32; h = 32; break;
+          case 102: w =  64; h = 32; break;
+          case 103: w =  64; h = 64; break;
+          case 104: w = 128; h = 64; break;
+        }
+        ledType = TYPE_HUB75MATRIX_HS;
+        pins[0] = w; pins[1] = h; pins[2] = chain; pins[3] = 1; pins[4] = chain;
+        length = w * h * chain;
+        needsSave = true;                      // rewrite cfg.json in 16.x format
+      }
+      #endif
       bool reversed = elm["rev"];
       bool refresh = elm["ref"] | false;
       uint16_t freqkHz = elm[F("freq")] | 0;  // will be in kHz for DotStar and Hz for PWM
       uint8_t AWmode = elm[F("rgbwm")] | RGBW_MODE_MANUAL_ONLY;
       uint8_t maPerLed = elm[F("ledma")] | LED_MILLIAMPS_DEFAULT;
-      uint16_t maMax = elm[F("maxpwr")] | (ablMilliampsMax * length) / total; // rough (incorrect?) per strip ABL calculation when no config exists
+      // NOTE: the fallback expression is evaluated even when "maxpwr" exists (ArduinoJson
+      // operator| is a call), and "total" can legitimately be 0 in a config saved while
+      // buses were torn down (e.g. HUB75 reinit on S3) - unguarded, that is a divide-by-
+      // zero boot loop. Found via QA on the Apollo M-1 4-panel chain test.
+      uint16_t maMax = elm[F("maxpwr")] | ((total > 0) ? (ablMilliampsMax * length) / total : 0); // rough (incorrect?) per strip ABL calculation when no config exists
       // To disable brightness limiter we either set output max current to 0 or single LED current to 0 (we choose output max current)
       if (Bus::isPWM(ledType) || Bus::isOnOff(ledType) || Bus::isVirtual(ledType)) { // analog and virtual
         maPerLed = 0;
@@ -282,6 +319,9 @@ bool deserializeConfig(JsonObject doc, bool fromFS) {
       // Assign all pins first so we can check for conflicts on this bus
       for (unsigned j = 0; j < busPins && j < OUTPUT_MAX_PINS; j++) defPin[j] = defDataPins[pinsIndex + j];
 
+      // HUB75 pin slots hold config values (panel width/height, chain, rows, cols),
+      // not GPIOs - GPIO sanitization must not rewrite them (same carve-out as validatePinsAndTypes())
+      if (!Bus::isHub75(dataType))
       for (unsigned j = 0; j < busPins && j < OUTPUT_MAX_PINS; j++) {
         bool validPin = true;
         // When booting without config (1st boot) we need to make sure GPIOs defined for LED output don't clash with hardware

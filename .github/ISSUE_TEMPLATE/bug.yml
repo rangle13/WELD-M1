@@ -5,9 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Please quickly search existing issues first before submitting a bug.  
-        Please don't submit long error analyses created by an AI agent, these are often totally wrong.  
-        Just describe the problem in your own words.
+        Please quickly search existing issues first before submitting a bug.
   - type: textarea
     id: what-happened
     attributes:
@@ -61,13 +59,12 @@ body:
       options:
         - ESP8266
         - ESP32
-        - ESP32 with ethernet
-        - ESP32-S2
         - ESP32-S3
+        - ESP32-S2
         - ESP32-C3
-        - ESP32-C5 (experimental)
+        - Other
         - ESP32-C6 (experimental)
-        - ESP32-P4 (experimental)
+        - ESP32-C5 (experimental)
     validations:
       required: true
   - type: textarea

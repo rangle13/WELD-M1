@@ -4,6 +4,11 @@
   "home_assistant_domain": "wled",
   "new_install_prompt_erase": true,
   "builds": [
-    { "chipFamily": "ESP32-S3", "parts": [ { "path": "M-1_full_install.bin", "offset": 0 } ] }
+    {
+      "chipFamily": "ESP32-S3",
+      "parts": [
+        { "path": "M-1_full_install.bin", "offset": 0 }
+      ]
+    }
   ]
 }

@@ -28,19 +28,18 @@ class ADS1115Usermod : public Usermod {
     }
 
     void loop() {
-      if (!isEnabled || strip.isUpdating() || millis() - lastTime <= loopInterval)
-        return;
+      if (isEnabled && millis() - lastTime > loopInterval) {
+        lastTime = millis();
 
-      lastTime = millis();
+        // If we don't have new data, skip this iteration.
+        if (!ads.conversionComplete()) {
+          return;
+        }
 
-      // If we don't have new data, skip this iteration.
-      if (!ads.conversionComplete()) {
-        return;
+        updateResult();
+        moveToNextChannel();
+        startReading();
       }
-
-      updateResult();
-      moveToNextChannel();
-      startReading();
     }
 
     void addToJsonInfo(JsonObject& root)
@@ -70,8 +69,6 @@ class ADS1115Usermod : public Usermod {
     {
       JsonObject top = root.createNestedObject(F("ADC ADS1115"));
       
-      top[F("Loop Interval")] = loopInterval;
-
       for (uint8_t i = 0; i < channelsCount; i++) {
         ChannelSettings* settingsPtr = &(channelSettings[i]);
         JsonObject channel = top.createNestedObject(settingsPtr->settingName);
@@ -82,6 +79,8 @@ class ADS1115Usermod : public Usermod {
         channel[F("Offset")] = settingsPtr->offset;
         channel[F("Decimals")] = settingsPtr->decimals;
       }
+
+      top[F("Loop Interval")] = loopInterval;
     }
 
     bool readFromConfig(JsonObject& root)

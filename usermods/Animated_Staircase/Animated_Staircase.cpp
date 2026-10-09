@@ -25,8 +25,6 @@ class Animated_Staircase : public Usermod {
     unsigned int topMaxDist        = 50;    // default maximum measured distance in cm, top
     unsigned int bottomMaxDist     = 50;    // default maximum measured distance in cm, bottom
     bool togglePower               = false; // toggle power on/off with staircase on/off
-    bool topAPinInvert             = false; // invert output of top sensor
-    bool bottomAPinInvert          = false; // invert output of bottom sensor
 
     /* runtime variables */
     bool initDone = false;
@@ -93,8 +91,6 @@ class Animated_Staircase : public Usermod {
     static const char _topEchoCm[];
     static const char _bottomEchoCm[];
     static const char _togglePower[];
-    static const char _topPIRorTrigger_pin_invert[];
-    static const char _bottomPIRorTrigger_pin_invert[];
 
     void publishMqtt(bool bottom, const char* state) {
 #ifndef WLED_DISABLE_MQTT
@@ -160,12 +156,6 @@ class Animated_Staircase : public Usermod {
       return pulseIn(echoPin, HIGH, maxTimeUs) > 0;
     }
 
-    bool readPIRPin(int8_t pin, bool invert) {
-      if (pin < 0) return false;
-        bool v = digitalRead(pin);
-      return invert ? !v : v;
-    }
-
     bool checkSensors() {
       bool sensorChanged = false;
 
@@ -174,15 +164,15 @@ class Animated_Staircase : public Usermod {
 
         bottomSensorRead = bottomSensorWrite ||
           (!useUSSensorBottom ?
-            (bottomPIRorTriggerPin<0 ? false : readPIRPin(bottomPIRorTriggerPin, bottomAPinInvert)) :
+            (bottomPIRorTriggerPin<0 ? false : digitalRead(bottomPIRorTriggerPin)) :
             ultrasoundRead(bottomPIRorTriggerPin, bottomEchoPin, bottomMaxDist*59)  // cm to us
           );
         topSensorRead = topSensorWrite ||
           (!useUSSensorTop ?
-            (topPIRorTriggerPin<0 ? false : readPIRPin(topPIRorTriggerPin, topAPinInvert)) :
+            (topPIRorTriggerPin<0 ? false : digitalRead(topPIRorTriggerPin)) :
             ultrasoundRead(topPIRorTriggerPin, topEchoPin, topMaxDist*59)   // cm to us
           );
-     
+
         if (bottomSensorRead != bottomSensorState) {
           bottomSensorState = bottomSensorRead; // change previous state
           sensorChanged = true;
@@ -449,20 +439,18 @@ class Animated_Staircase : public Usermod {
       if (staircase.isNull()) {
         staircase = root.createNestedObject(FPSTR(_name));
       }
-      staircase[FPSTR(_enabled)]                       = enabled;
-      staircase[FPSTR(_segmentDelay)]                  = segment_delay_ms;
-      staircase[FPSTR(_onTime)]                        = on_time_ms / 1000;
-      staircase[FPSTR(_useTopUltrasoundSensor)]        = useUSSensorTop;
-      staircase[FPSTR(_topPIRorTrigger_pin)]           = topPIRorTriggerPin;
-      staircase[FPSTR(_topEcho_pin)]                   = useUSSensorTop ? topEchoPin : -1;
-      staircase[FPSTR(_useBottomUltrasoundSensor)]     = useUSSensorBottom;
-      staircase[FPSTR(_bottomPIRorTrigger_pin)]        = bottomPIRorTriggerPin;
-      staircase[FPSTR(_bottomEcho_pin)]                = useUSSensorBottom ? bottomEchoPin : -1;
-      staircase[FPSTR(_topEchoCm)]                     = topMaxDist;
-      staircase[FPSTR(_bottomEchoCm)]                  = bottomMaxDist;
-      staircase[FPSTR(_togglePower)]                   = togglePower;
-      staircase[FPSTR(_topPIRorTrigger_pin_invert)]    = topAPinInvert;
-      staircase[FPSTR(_bottomPIRorTrigger_pin_invert)] = bottomAPinInvert;
+      staircase[FPSTR(_enabled)]                   = enabled;
+      staircase[FPSTR(_segmentDelay)]              = segment_delay_ms;
+      staircase[FPSTR(_onTime)]                    = on_time_ms / 1000;
+      staircase[FPSTR(_useTopUltrasoundSensor)]    = useUSSensorTop;
+      staircase[FPSTR(_topPIRorTrigger_pin)]       = topPIRorTriggerPin;
+      staircase[FPSTR(_topEcho_pin)]               = useUSSensorTop ? topEchoPin : -1;
+      staircase[FPSTR(_useBottomUltrasoundSensor)] = useUSSensorBottom;
+      staircase[FPSTR(_bottomPIRorTrigger_pin)]    = bottomPIRorTriggerPin;
+      staircase[FPSTR(_bottomEcho_pin)]            = useUSSensorBottom ? bottomEchoPin : -1;
+      staircase[FPSTR(_topEchoCm)]                 = topMaxDist;
+      staircase[FPSTR(_bottomEchoCm)]              = bottomMaxDist;
+      staircase[FPSTR(_togglePower)]               = togglePower;
       DEBUG_PRINTLN(F("Staircase config saved."));
     }
 
@@ -474,13 +462,11 @@ class Animated_Staircase : public Usermod {
     bool readFromConfig(JsonObject& root) {
       bool oldUseUSSensorTop = useUSSensorTop;
       bool oldUseUSSensorBottom = useUSSensorBottom;
-      bool oldTopAPinInvert = topAPinInvert;
-      bool oldBottomAPinInvert = bottomAPinInvert;
       int8_t oldTopAPin = topPIRorTriggerPin;
       int8_t oldTopBPin = topEchoPin;
       int8_t oldBottomAPin = bottomPIRorTriggerPin;
       int8_t oldBottomBPin = bottomEchoPin;
-     
+
       JsonObject top = root[FPSTR(_name)];
       if (top.isNull()) {
         DEBUG_PRINT(FPSTR(_name));
@@ -499,12 +485,10 @@ class Animated_Staircase : public Usermod {
       useUSSensorTop     = top[FPSTR(_useTopUltrasoundSensor)] | useUSSensorTop;
       topPIRorTriggerPin = top[FPSTR(_topPIRorTrigger_pin)] | topPIRorTriggerPin;
       topEchoPin         = top[FPSTR(_topEcho_pin)] | topEchoPin;
-      topAPinInvert      = top[FPSTR(_topPIRorTrigger_pin_invert)] | topAPinInvert;
-     
+
       useUSSensorBottom     = top[FPSTR(_useBottomUltrasoundSensor)] | useUSSensorBottom;
       bottomPIRorTriggerPin = top[FPSTR(_bottomPIRorTrigger_pin)] | bottomPIRorTriggerPin;
       bottomEchoPin         = top[FPSTR(_bottomEcho_pin)] | bottomEchoPin;
-      bottomAPinInvert      = top[FPSTR(_bottomPIRorTrigger_pin_invert)] | bottomAPinInvert;
 
       topMaxDist    = top[FPSTR(_topEchoCm)] | topMaxDist;
       topMaxDist    = min(150,max(30,(int)topMaxDist));     // max distance ~1.5m (a lag of 9ms may be expected)
@@ -570,15 +554,14 @@ const char Animated_Staircase::_segmentDelay[]              PROGMEM = "segment-d
 const char Animated_Staircase::_onTime[]                    PROGMEM = "on-time-s";
 const char Animated_Staircase::_useTopUltrasoundSensor[]    PROGMEM = "useTopUltrasoundSensor";
 const char Animated_Staircase::_topPIRorTrigger_pin[]       PROGMEM = "topPIRorTrigger_pin";
-const char Animated_Staircase::_topPIRorTrigger_pin_invert[]    PROGMEM = "topPIRorTrigger_pin_invert";
 const char Animated_Staircase::_topEcho_pin[]               PROGMEM = "topEcho_pin";
 const char Animated_Staircase::_useBottomUltrasoundSensor[] PROGMEM = "useBottomUltrasoundSensor";
 const char Animated_Staircase::_bottomPIRorTrigger_pin[]    PROGMEM = "bottomPIRorTrigger_pin";
-const char Animated_Staircase::_bottomPIRorTrigger_pin_invert[] PROGMEM = "bottomPIRorTrigger_pin_invert";
 const char Animated_Staircase::_bottomEcho_pin[]            PROGMEM = "bottomEcho_pin";
 const char Animated_Staircase::_topEchoCm[]                 PROGMEM = "top-dist-cm";
 const char Animated_Staircase::_bottomEchoCm[]              PROGMEM = "bottom-dist-cm";
 const char Animated_Staircase::_togglePower[]               PROGMEM = "toggle-on-off";
+
 
 static Animated_Staircase animated_staircase;
 REGISTER_USERMOD(animated_staircase);

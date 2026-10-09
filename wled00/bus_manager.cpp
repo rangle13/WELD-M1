@@ -858,6 +858,10 @@ BusHub75Matrix::BusHub75Matrix(const BusConfig &bc) : Bus(bc.type, bc.start, bc.
     else mxconfig.setPixelColorDepthBits(8);
   } else mxconfig.setPixelColorDepthBits(8);
 #endif
+  // note: do NOT port WLED-MM's S3 depth-reduction table (4-bit at 16384 px) to this lib:
+  // measured on the M-1 4-panel chain it REGRESSED fps (plasma 8->5, DNA 17->12) and heap
+  // (-7K) - MM's table was tuned for the softhack007 lib fork, whose bitplane/refresh math
+  // differs from this upstream driver (QA D10 session 2, 2026-07-13).
 
 
 //  HUB75_I2S_CFG::i2s_pins _pins={R1_PIN, G1_PIN, B1_PIN, R2_PIN, G2_PIN, B2_PIN, A_PIN, B_PIN, C_PIN, D_PIN, E_PIN, LAT_PIN, OE_PIN, CLK_PIN};
@@ -1049,12 +1053,21 @@ BusHub75Matrix::BusHub75Matrix(const BusConfig &bc) : Bus(bc.type, bc.start, bc.
     }
     setBitArray(_ledsDirty, _len, false);             // reset dirty bits
 
-    // create LEDs buffer (initialized to BLACK), prefer DRAM if enough heap is available (faster in case global _pixels buffer is in PSRAM as not both will fit the cache)
-    _ledBuffer = static_cast<CRGB*>(allocate_buffer(_len * sizeof(CRGB), BFRALLOC_PREFER_DRAM | BFRALLOC_CLEAR));
+    // create LEDs buffer (initialized to BLACK). PREFER_PSRAM keeps small (single-panel) buffers
+    // in DRAM when heap is plentiful but spills large chain buffers (4x 64x64 = 48KB) to PSRAM:
+    // with PREFER_DRAM a long chain starves internal heap and trips the low-heap watchdog in
+    // wled.cpp, which force-resets all segments (verified on a 256x64 chain, BENCH_SESSION_D10.md)
+    _ledBuffer = static_cast<CRGB*>(allocate_buffer(_len * sizeof(CRGB), BFRALLOC_PREFER_PSRAM | BFRALLOC_CLEAR));
   }
 
   PANEL_CHAIN_TYPE chainType = CHAIN_NONE; // default for quarter-scan panels that do not use chaining
-  if (mxconfig.chain_length > 1 && (_rows > 1 || _cols > 1)) chainType = CHAIN_TOP_RIGHT_DOWN; // we need to use a _DOWN chainType, otherwise the first panel is upside-down
+  // Single-ROW chains need no virtual remap: the DMA chain IS the row, and the raw
+  // display already presents width = panelWidth * chain (this is how WLED-MM drove
+  // 1xN chains, field-proven on the Apollo M-1 4x1). The virtual layer is only
+  // needed when panels are arranged in multiple rows (serpentine grids).
+  // With the remap wrongly applied to a 1x4 HS chain, content is scrambled into
+  // 16-px staircases (verified on hardware, see BENCH_SESSION_D10.md).
+  if (mxconfig.chain_length > 1 && (_rows > 1)) chainType = CHAIN_TOP_RIGHT_DOWN; // we need to use a _DOWN chainType, otherwise the first panel is upside-down
   // chained panels with cols and rows define need the virtual display driver, so do quarter-scan panels
   if (chainType != CHAIN_NONE || bc.type == TYPE_HUB75MATRIX_QS) {
     _isVirtual = true;

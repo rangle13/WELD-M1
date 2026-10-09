@@ -42,7 +42,9 @@
 #define DEFAULT_MODE       (uint8_t)0
 #define DEFAULT_SPEED      (uint8_t)128
 #define DEFAULT_INTENSITY  (uint8_t)128
+#ifndef DEFAULT_COLOR
 #define DEFAULT_COLOR      (uint32_t)0xFFA000
+#endif
 #define DEFAULT_C1         (uint8_t)128
 #define DEFAULT_C2         (uint8_t)128
 #define DEFAULT_C3         (uint8_t)16
@@ -973,8 +975,8 @@ class WS2812FX {
     struct Panel {
       uint16_t xOffset; // x offset relative to the top left of matrix in LEDs
       uint16_t yOffset; // y offset relative to the top left of matrix in LEDs
-      uint8_t  width;   // width of the panel
-      uint8_t  height;  // height of the panel
+      uint16_t width;   // width of the panel; 16-bit so a HUB75 chain can be one wide panel (4x64=256 wraps to 0 in 8 bits)
+      uint16_t height;  // height of the panel
       union {
         uint8_t options;
         struct {
