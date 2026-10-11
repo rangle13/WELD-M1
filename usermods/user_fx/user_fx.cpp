@@ -1257,6 +1257,7 @@ static void mode_morsecode(void) {
 }
 static const char _data_FX_MODE_MORSECODE[] PROGMEM = "Morse Code@Speed,,,,Color mode,Color by Word,Punctuation,EndOfMessage;;!;1;sx=192,c3=8,o1=1,o2=1";
 
+void bubbleBurstEffect(void);
 
 /////////////////////
 //  UserMod Class  //
@@ -1272,7 +1273,7 @@ class UserFxUsermod : public Usermod {
     strip.addEffect(255, &mode_2D_magma, _data_FX_MODE_2D_MAGMA);
     strip.addEffect(255, &mode_ants, _data_FX_MODE_ANTS);
     strip.addEffect(255, &mode_morsecode, _data_FX_MODE_MORSECODE);
-
+    strip.addEffect(255, &bubbleBurstEffect, "Bubble Burst Family Tree");
     ////////////////////////////////////////
     //  add your effect function(s) here  //
     ////////////////////////////////////////
@@ -1289,7 +1290,7 @@ class UserFxUsermod : public Usermod {
   //  If you want configuration options in the usermod settings page, implement these methods  //
   ///////////////////////////////////////////////////////////////////////////////////////////////
 
-  // void addToConfig(JsonObject& root) override
+  void addToConfig(JsonObject& root) override {}
   // {
   //   JsonObject top = root.createNestedObject(FPSTR("User FX"));
   //   top["myConfigValue"] = myConfigValue;
