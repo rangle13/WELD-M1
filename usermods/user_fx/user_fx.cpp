@@ -1,4 +1,5 @@
 #include "wled.h"
+#include "glowtext_plus/glowtext_plus.h"
 
 // for information how FX metadata strings work see https://kno.wled.ge/interfaces/json-api/#effect-metadata
 
@@ -1256,6 +1257,7 @@ static void mode_morsecode(void) {
   }
 }
 static const char _data_FX_MODE_MORSECODE[] PROGMEM = "Morse Code@Speed,,,,Color mode,Color by Word,Punctuation,EndOfMessage;;!;1;sx=192,c3=8,o1=1,o2=1";
+static const char _data_FX_MODE_GLOWTEXTPLUS[] PROGMEM = "GlowText+@Scroll speed,Glow,Reveal speed,Font;!,!;;2;ix=128,c1=128,c2=0";
 
 void bubbleBurstEffect(void);
 
@@ -1274,6 +1276,8 @@ class UserFxUsermod : public Usermod {
     strip.addEffect(255, &mode_ants, _data_FX_MODE_ANTS);
     strip.addEffect(255, &mode_morsecode, _data_FX_MODE_MORSECODE);
     strip.addEffect(255, &bubbleBurstEffect, "Bubble Burst Family Tree");
+    strip.addEffect(255, &mode_glowtextplus, _data_FX_MODE_GLOWTEXTPLUS);
+
     ////////////////////////////////////////
     //  add your effect function(s) here  //
     ////////////////////////////////////////
