@@ -14,6 +14,78 @@
 //   Font (c2)      -> built-in font 0..4
 // Colors: 1 = text, 2 = glow
 
+// ===================== GlowText+ UI JSON =====================
+const char JSON_GLOWTEXTPLUS[] PROGMEM = R"json({
+  "text": {
+    "name": "Text",
+    "type": "text",
+    "default": "Hello World"
+  },
+  "textColor": {
+    "name": "Text Color",
+    "type": "color"
+  },
+  "glowColor": {
+    "name": "Glow Color",
+    "type": "color"
+  },
+  "glowStrength": {
+    "name": "Glow Strength",
+    "type": "slider",
+    "min": 0,
+    "max": 255,
+    "default": 80
+  },
+  "outlineStrength": {
+    "name": "Outline Strength",
+    "type": "slider",
+    "min": 0,
+    "max": 255,
+    "default": 40
+  },
+  "scrollSpeed": {
+    "name": "Scroll Speed",
+    "type": "slider",
+    "min": 0,
+    "max": 255,
+    "default": 60
+  },
+  "scrollDir": {
+    "name": "Scroll Direction",
+    "type": "select",
+    "options": ["Left", "Right"],
+    "default": "Left"
+  },
+  "fontIndex": {
+    "name": "Font",
+    "type": "select",
+    "options": ["0","1","2","3"],
+    "default": "0"
+  },
+  "lineSpacing": {
+    "name": "Line Spacing",
+    "type": "slider",
+    "min": 0,
+    "max": 20,
+    "default": 4
+  },
+  "fadeTime": {
+    "name": "Fade Time",
+    "type": "slider",
+    "min": 0,
+    "max": 2000,
+    "default": 300
+  },
+  "bgDim": {
+    "name": "Background Dim",
+    "type": "slider",
+    "min": 0,
+    "max": 255,
+    "default": 20
+  }
+})json";
+
+
 void mode_glowtextplus(void) {
   if (!strip.isMatrix || !SEGMENT.is2D()) { SEGMENT.fill(BLACK); return; }
 
@@ -22,7 +94,7 @@ void mode_glowtextplus(void) {
 
   char text[WLED_MAX_SEGNAME_LEN + 1] = {'\0'};
   if (SEGMENT.name && SEGMENT.name[0]) strlcpy(text, SEGMENT.name, sizeof(text));
-  else strlcpy(text, "Hello", sizeof(text));
+  else strlcpy(text, "Hello World", sizeof(text));
 
   FontManager fontManager(&SEGMENT);
   uint8_t fontNum = map(SEGMENT.custom2, 0, 255, 0, 4);
